@@ -27,6 +27,7 @@ public:
     unsigned int get_first() const { return first; };
     unsigned int get_second() const { return second; };
     unsigned int get_third() const { return third; };
+    void change_third(unsigned int new_t) { third = new_t; };
     friend std::ostream &operator << (std::ostream & out, const Activity a) {
         out << a.activity << " " << a.first << " " << a.second << " " << a.third;
         return out;
@@ -125,6 +126,8 @@ void FIFO(unsigned long task_number, std::vector<std::queue<Activity>> T, unsign
     std::vector<int> task_waiting_time(task_number, 0);
     std::vector<Activity> blocked;
     std::vector<unsigned int> task_done_in_check_blocked;
+    std::vector<Activity> temp_vector;
+    std::vector<std::vector<Activity>> resource_obtain_table(task_number, temp_vector);
     while (!empty_T(T)) {
         int make_a_move = 0;
         std::vector<int> release(resource_number, 0);
@@ -151,12 +154,21 @@ void FIFO(unsigned long task_number, std::vector<std::queue<Activity>> T, unsign
             // otherwise, process current task
             Activity a = T[i].front();
             if (a.get_name().compare("initiate") == 0) {
+                // resource resource_type claim_number obtain_number
+                Activity tmp("resource", a.get_second(), a.get_third(), 0);
+                resource_obtain_table[i].push_back(tmp);
                 T[i].pop();
                 make_a_move++;
             }
             else if (a.get_name().compare("request") == 0) {
                 if (a.get_third() <= R[a.get_second() - 1]) {
                     R[a.get_second() - 1] -= a.get_third();
+                    for (int j = 0; j < resource_obtain_table[i].size(); j++) {
+                        if (resource_obtain_table[i][j].get_first() == a.get_second()) {
+                            resource_obtain_table[i][j].change_third(resource_obtain_table[i][j].get_third() + a.get_third());
+                            break;
+                        }
+                    }
                     make_a_move++;
                 }
                 else {
@@ -167,6 +179,12 @@ void FIFO(unsigned long task_number, std::vector<std::queue<Activity>> T, unsign
             }
             else if (a.get_name().compare("release") == 0) {
                 release[a.get_second() - 1] += a.get_third();
+                for (int j = 0; j < resource_obtain_table[i].size(); j++) {
+                    if (resource_obtain_table[i][j].get_first() == a.get_second()) {
+                        resource_obtain_table[i][j].change_third(resource_obtain_table[i][j].get_third() - a.get_third());
+                        break;
+                    }
+                }
                 T[i].pop();
                 make_a_move++;
             }
@@ -180,13 +198,38 @@ void FIFO(unsigned long task_number, std::vector<std::queue<Activity>> T, unsign
                 task_time_taken[i] = count_cycle;
             }
         }
-        // if deadlock happens, then abort task(s) to solve the deadlock
-        if (0 == make_a_move) {
-            std::cout << "deadlock";
-            return;
-        }
         for (int i = 0; i < resource_number; i++) {
             R[i] += release[i];
+        }
+        // if deadlock happens, then abort task(s) to solve the deadlock
+        if (0 == make_a_move) {
+            while(!blocked.empty()) {
+                int index = 0;
+                int min_task_index = blocked[0].get_first() - 1;
+                for (int i = 1; i < blocked.size(); i++) {
+                    if (min_task_index > blocked[i].get_first() - 1) {
+                        min_task_index = blocked[i].get_first() - 1;
+                        index = i;
+                    }
+                }
+                Activity a = blocked[index];
+                for (int j = 0; j < resource_obtain_table[a.get_first() - 1].size(); j++) {
+                    if (resource_obtain_table[a.get_first() - 1][j].get_first() == a.get_second()) {
+                        R[a.get_second() - 1] += resource_obtain_table[a.get_first() - 1][j].get_third();
+                        resource_obtain_table[a.get_first() - 1][j].change_third(0);
+                    }
+                }
+                task_time_taken[a.get_first() - 1] = 0;
+                while (!T[a.get_first() - 1].empty()) {
+                    T[a.get_first() - 1].pop();
+                }
+                blocked.erase(blocked.begin() + index);
+                a = blocked[0];
+                if (a.get_third() <= R[a.get_second() - 1]) {
+                    break;
+                }
+            }
+
         }
         task_done_in_check_blocked.clear();
         count_cycle++;
