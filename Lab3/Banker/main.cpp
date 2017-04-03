@@ -1,21 +1,22 @@
 #include "banker.h"
 
 void process() {
-    int task_number;
-    std::vector<std::vector<Activity>> T;
-    int resource_number;
+    unsigned long task_number;
+    std::vector<std::queue<Activity>> T;
+    unsigned long resource_number;
     std::vector<int> R;
 
     get_input(task_number, T, resource_number, R);
 //    print_input(task_number, T, resource_number, R);
 
+    FIFO(task_number, T, resource_number, R);
 }
 
 int main(int argc, char const * argv[]) {
     // input
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
-            if (i == 1) {
+            if (i != 0) {
                 std::cin.clear();
                 std::cin.sync();
                 freopen(argv[i], "r", stdin);

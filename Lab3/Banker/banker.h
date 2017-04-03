@@ -33,10 +33,10 @@ public:
     }
 };
 
-void get_input(int & task_number, std::vector<std::vector<Activity>> & T, int & resource_number, std::vector<int> & R) {
+void get_input(unsigned long & task_number, std::vector<std::queue<Activity>> & T, unsigned long & resource_number, std::vector<int> & R) {
     std::cin >> task_number;
     for (int i = 0; i < task_number; i++) {
-        std::vector<Activity> tmp;
+        std::queue<Activity> tmp;
         T.push_back(tmp);
     }
     std::cin >> resource_number;
@@ -51,21 +51,147 @@ void get_input(int & task_number, std::vector<std::vector<Activity>> & T, int & 
         unsigned int f,s,t;
         std::cin >> a >> f >> s >> t;
         Activity tmp(a, f, s, t);
-        T[f-1].push_back(tmp);
+        T[f-1].push(tmp);
+        if (a.compare("compute") == 0) {
+            for (int i = 1; i < s; i++) {
+                T[f-1].push(tmp);
+            }
+        }
         if (a.compare("terminate") == 0) {
             terminate_count++;
         }
     }
 }
 
-void print_input(int & task_number, std::vector<std::vector<Activity>> & T, int & resource_number, std::vector<int> & R) {
+void print_input(unsigned long task_number, std::vector<std::queue<Activity>> T, unsigned long resource_number, std::vector<int> R) {
+    std::cout << resource_number;
+    for (int i = 0; i < resource_number; i++) {
+        std::cout << " " << R[i];
+    }
+    std::cout << std::endl;
     for (int i = 0; i < task_number; i++) {
-        std::cout << "task" << i + 1 << ":\n";
-        for (int j = 0; j < T[i].size(); j++) {
-            std::cout << T[i][j] << std::endl;
+        std::cout << "task " << i + 1 << ":\n";
+        unsigned long T_size = T[i].size();
+        for (int j = 0; j < T_size; j++) {
+            std::cout << T[i].front() << std::endl;
+            T[i].pop();
         }
         std::cout << std::endl;
     }
+}
+
+void print_result(std::string method, unsigned long task_number, std::vector<int> task_time_taken, std::vector<int> task_waiting_time) {
+    int total_time = 0, total_waiting_time = 0;
+    std::cout << method << std::endl;
+    for (int i = 0; i < task_number; i++) {
+        std::ostringstream task;
+        task << "Task " << i + 1;
+        if (task_time_taken[i] == 0) {
+            std::cout << std::left << std::setw(10) << task.str() << "aborted" << std::endl;
+            continue;
+        }
+        std::cout << std::left << std::setw(10) << task.str()
+                  << std::setw(6) << task_time_taken[i]
+                  << std::setw(6) << task_waiting_time[i]
+                  << task_waiting_time[i] * 100 / task_time_taken[i] << "%" << std::endl;
+        total_time += task_time_taken[i];
+        total_waiting_time += task_waiting_time[i];
+    }
+    std::cout << std::setw(10) << "total"
+              << std::setw(6) << total_time
+              << std::setw(6)  << total_waiting_time
+              << total_waiting_time * 100 / total_time << "%" << std::endl;
+}
+
+bool empty_T(std::vector<std::queue<Activity>> T) {
+    for (int i = 0; i < T.size(); i++) {
+        if (!T[i].empty()) return false;
+    }
+    return true;
+}
+
+bool check_done(std::vector<unsigned int> task_done_in_check_blocked, unsigned int that) {
+    for (int i = 0; i < task_done_in_check_blocked.size(); i++) {
+        if (task_done_in_check_blocked[i] == that) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void FIFO(unsigned long task_number, std::vector<std::queue<Activity>> T, unsigned long resource_number, std::vector<int> R) {
+    int count_cycle = 1;
+    std::vector<int> task_time_taken(task_number, 0);
+    std::vector<int> task_waiting_time(task_number, 0);
+    std::vector<Activity> blocked;
+    std::vector<unsigned int> task_done_in_check_blocked;
+    while (!empty_T(T)) {
+        int make_a_move = 0;
+        std::vector<int> release(resource_number, 0);
+        // check blocked tasks first
+        for (int i = 0; i < blocked.size(); i++) {
+            Activity a = blocked[i];
+            task_done_in_check_blocked.push_back(a.get_first());
+            if (a.get_third() <= R[a.get_second() - 1]) {
+                R[a.get_second() - 1] -= a.get_third();
+                blocked.erase(blocked.begin() + i);
+                i--;
+                make_a_move++;
+            }
+            else {
+                task_waiting_time[a.get_first() - 1]++;
+            }
+        }
+        // deal with other tasks
+        for (int i = 0; i < task_number; i++) {
+            // if the current task doesn't have any activity, then skip this task
+            if (T[i].empty()) continue;
+            // if the current task is already done in check blocked, then skip this task
+            if (check_done(task_done_in_check_blocked, T[i].front().get_first())) continue;
+            // otherwise, process current task
+            Activity a = T[i].front();
+            if (a.get_name().compare("initiate") == 0) {
+                T[i].pop();
+                make_a_move++;
+            }
+            else if (a.get_name().compare("request") == 0) {
+                if (a.get_third() <= R[a.get_second() - 1]) {
+                    R[a.get_second() - 1] -= a.get_third();
+                    make_a_move++;
+                }
+                else {
+                    blocked.push_back(a);
+                    task_waiting_time[i]++;
+                }
+                T[i].pop();
+            }
+            else if (a.get_name().compare("release") == 0) {
+                release[a.get_second() - 1] += a.get_third();
+                T[i].pop();
+                make_a_move++;
+            }
+            else if (a.get_name().compare("compute") == 0) {
+                T[i].pop();
+                make_a_move++;
+            }
+            a = T[i].front();
+            if (a.get_name().compare("terminate") == 0) {
+                T[i].pop();
+                task_time_taken[i] = count_cycle;
+            }
+        }
+        // if deadlock happens, then abort task(s) to solve the deadlock
+        if (0 == make_a_move) {
+            std::cout << "deadlock";
+            return;
+        }
+        for (int i = 0; i < resource_number; i++) {
+            R[i] += release[i];
+        }
+        task_done_in_check_blocked.clear();
+        count_cycle++;
+    }
+    print_result("FIFO", task_number, task_time_taken, task_waiting_time);
 }
 
 
