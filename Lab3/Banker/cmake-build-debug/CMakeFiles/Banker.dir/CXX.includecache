@@ -6,7 +6,25 @@
 
 #IncludeRegexTransform: 
 
-/Users/chrome/Documents/NYU/2017Spring/Operating System/2017_os_lab3/Lab3/Banker/main.cpp
+/Users/chrome/Documents/NYU/2017Spring/Operating System/2017_os_lab3/Lab3/Banker/banker.h
 iostream
 -
+iomanip
+-
+cstdio
+-
+string
+-
+sstream
+-
+vector
+-
+queue
+-
+iostream
+-
+
+/Users/chrome/Documents/NYU/2017Spring/Operating System/2017_os_lab3/Lab3/Banker/main.cpp
+banker.h
+/Users/chrome/Documents/NYU/2017Spring/Operating System/2017_os_lab3/Lab3/Banker/banker.h
 
