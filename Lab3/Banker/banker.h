@@ -402,7 +402,7 @@ void Banker(unsigned long task_number, std::vector<std::queue<Activity>> T, unsi
                             std::cout << "During cycle " << count_cycle - 1 << "-" << count_cycle << " of Banker's algorithms" << std::endl;
                             std::cout << "\tTask " << i + 1 << "'s request exceeds its claim; aborted; "
                                       << resource_obtain_table[i][j].get_third() << " units of resource "
-                                      << resource_obtain_table[i][j].get_second() << " will be available next cycle" << std::endl;
+                                      << resource_obtain_table[i][j].get_first() << " will be available next cycle" << std::endl;
                             abort = true;
                             break;
                         }
