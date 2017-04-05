@@ -1,10 +1,10 @@
 #include "banker.h"
 
 void process() {
-    unsigned long task_number;
-    std::vector<std::queue<Activity>> T;
-    unsigned long resource_number;
-    std::vector<int> R;
+    unsigned long task_number; // record the number of the tasks
+    std::vector<std::queue<Activity>> T; // store the Activities of each task
+    unsigned long resource_number; // record the number of the resource types
+    std::vector<int> R; // store the resource type and the units it has
 
     get_input(task_number, T, resource_number, R);
 //    print_input(task_number, T, resource_number, R);

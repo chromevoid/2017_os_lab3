@@ -136,7 +136,14 @@ bool check_done(std::vector<unsigned int> task_done_in_check_blocked, unsigned i
     return false;
 }
 
-/* Run FIFO */
+/* Run FIFO
+ *   while (not finished)
+ *     check blocked queue and deal with the tasks in the queue
+ *     check each task except the ones have been done in blocked queue
+ *     check if the task is terminated
+ *     restore the resources that are released in this cycle
+ *     check deadlock, then solve the deadlock if deadlock exits
+ *   */
 void FIFO(unsigned long task_number, std::vector<std::queue<Activity>> T, unsigned long resource_number, std::vector<int> R) {
     int count_cycle = 1; // record the cycle number
     std::vector<int> task_time_taken(task_number, 0); // store the time taken for each task
@@ -264,15 +271,19 @@ void FIFO(unsigned long task_number, std::vector<std::queue<Activity>> T, unsign
     print_result("FIFO", task_number, task_time_taken, task_waiting_time);
 }
 
-bool is_safe(Activity a, std::vector<int> R, std::vector<std::vector<Activity>> resource_obtain_table) {
-    for (int i = 0; i < resource_obtain_table[a.get_first() - 1].size(); i++) {
-        if (a.get_second() == resource_obtain_table[a.get_first() - 1][i].get_first()) {
-            R[a.get_second() - 1] -= a.get_third();
-            resource_obtain_table[a.get_first() - 1][i].change_third(
-                    resource_obtain_table[a.get_first() - 1][i].get_third() + a.get_third());
-            break;
-        }
+/* Check if all the tasks are finished:
+ *   if all the tasks are done, return true
+ *   otherwise, return false */
+bool empty_ROT(std::vector<std::vector<Activity>> resource_obtain_table) {
+    for (int i = 0; i < resource_obtain_table.size(); i++) {
+        if (!resource_obtain_table[i].empty()) return false;
     }
+    return true;
+}
+
+/* Recursively check if a task can be done in each round */
+bool is_safe_recursively(std::vector<int> R, std::vector<std::vector<Activity>> resource_obtain_table) {
+    if (empty_ROT(resource_obtain_table)) return true;
     for (int i = 0; i < resource_obtain_table.size(); i++) {
         if (resource_obtain_table[i].size() == 0) continue;
         bool task_i_can_finished = true;
@@ -284,14 +295,45 @@ bool is_safe(Activity a, std::vector<int> R, std::vector<std::vector<Activity>> 
                 task_i_can_finished = false;
                 break;
             }
-        };
+        }
         if (task_i_can_finished) {
-            return true;
+            for (int j = 0; j < resource_obtain_table[i].size(); j++) {
+                unsigned int resource_type = resource_obtain_table[i][j].get_first();
+                unsigned int resource_obtain = resource_obtain_table[i][j].get_third();
+                R[resource_type - 1] += resource_obtain;
+                resource_obtain_table[i][j].change_third(0);
+            }
+            resource_obtain_table[i].clear();
+            return is_safe_recursively(R, resource_obtain_table);
         }
     };
     return false;
 }
-/* Run Banker */
+
+/* Check if the state is safe (This is an assist function for Banker)
+ *   pretend to grant the resource
+ *   check tasks
+ *   if all tasks can be completed, then return true, otherwise return false */
+bool is_safe(Activity a, std::vector<int> R, std::vector<std::vector<Activity>> resource_obtain_table) {
+    for (int i = 0; i < resource_obtain_table[a.get_first() - 1].size(); i++) {
+        if (a.get_second() == resource_obtain_table[a.get_first() - 1][i].get_first()) {
+            R[a.get_second() - 1] -= a.get_third();
+            resource_obtain_table[a.get_first() - 1][i].change_third(
+                    resource_obtain_table[a.get_first() - 1][i].get_third() + a.get_third());
+            break;
+        }
+    }
+    return is_safe_recursively(R, resource_obtain_table);
+}
+/* Run Banker
+ *   while (not finished)
+ *     check blocked queue and deal with the tasks in the queue
+ *       check if the state is safe before really grant the request
+ *     check each task except the ones have been done in blocked queue
+ *       when an activity is request, check if the state is safe before really grant the request
+ *     check if the task is terminated
+ *     restore the resources that are released in this cycle
+ *   */
 void Banker(unsigned long task_number, std::vector<std::queue<Activity>> T, unsigned long resource_number, std::vector<int> R) {
     int count_cycle = 1; // record the cycle number
     std::vector<int> task_time_taken(task_number, 0); // store the time taken for each task
