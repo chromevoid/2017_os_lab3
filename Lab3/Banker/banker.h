@@ -12,6 +12,7 @@
 #include <vector>
 #include <queue>
 #include <iostream>
+#include <math.h>
 
 /* There are six types of activity:
  *   initiate task-number resource-type initial-claim
@@ -105,14 +106,14 @@ void print_result(std::string method, unsigned long task_number, std::vector<int
         std::cout << std::left << std::setw(10) << task.str()
                   << std::setw(6) << task_time_taken[i]
                   << std::setw(6) << task_waiting_time[i]
-                  << task_waiting_time[i] * 100 / task_time_taken[i] << "%" << std::endl;
+                  << round(task_waiting_time[i] * 100.0 / task_time_taken[i]) << "%" << std::endl;
         total_time += task_time_taken[i];
         total_waiting_time += task_waiting_time[i];
     }
     std::cout << std::setw(10) << "total"
               << std::setw(6) << total_time
               << std::setw(6)  << total_waiting_time
-              << total_waiting_time * 100 / total_time << "%" << std::endl;
+              << round(total_waiting_time * 100.0 / total_time) << "%" << std::endl;
 }
 
 /* Check if all the activities are finished:

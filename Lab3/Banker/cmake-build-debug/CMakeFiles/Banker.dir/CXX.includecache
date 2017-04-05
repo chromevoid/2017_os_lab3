@@ -23,6 +23,8 @@ queue
 -
 iostream
 -
+math.h
+-
 
 /Users/chrome/Documents/NYU/2017Spring/Operating System/2017_os_lab3/Lab3/Banker/main.cpp
 banker.h

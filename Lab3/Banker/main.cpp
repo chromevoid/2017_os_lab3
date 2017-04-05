@@ -10,6 +10,7 @@ void process() {
 //    print_input(task_number, T, resource_number, R);
 
     FIFO(task_number, T, resource_number, R);
+    std::cout << std::endl;
     Banker(task_number, T, resource_number, R);
     std::cout << std::endl;
 }
